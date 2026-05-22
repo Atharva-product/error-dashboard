@@ -4,7 +4,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="Error Analytics Dashboard", layout="wide")
 
-st.title("📊 Error Analytics Dashboard")
+st.title(" Error Analytics Dashboard")
 
 # Google Sheet CSV URL
 url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/export?format=csv"
@@ -86,7 +86,7 @@ monthly_errors = (
 monthly_errors["Month"] = monthly_errors[date_col].dt.strftime("%b %Y")
 
 # Plot Bar Chart
-st.subheader("📊 Month-wise Error Count")
+st.subheader(" Month-wise Error Count")
 
 fig_month = px.bar(
     monthly_errors,
@@ -107,7 +107,7 @@ st.plotly_chart(fig_month, width='stretch')
 # =========================
 # ERROR BY
 # =========================
-st.subheader("📊 Error By")
+st.subheader(" Error By")
 
 error_by = df_filtered["Error By"].value_counts().reset_index()
 error_by.columns = ["Person", "Error Count"]
@@ -132,7 +132,7 @@ st.plotly_chart(fig1, width='stretch')
 # =========================
 # CONFIRMATION RECEIVED
 # =========================
-st.subheader("📊 Confirmation Received From Person Who Made Error")
+st.subheader(" Confirmation Received From Person Who Made Error")
 
 confirmation = df_filtered[
     "Confirmation received from person who made error"
@@ -160,7 +160,7 @@ st.plotly_chart(fig2, width='stretch')
 # =========================
 # CATEGORY ANALYSIS
 # =========================
-st.subheader("📊 Category Analysis")
+st.subheader(" Category Analysis")
 
 category = df_filtered["Category"].value_counts().reset_index()
 category.columns = ["Category", "Count"]
@@ -185,6 +185,6 @@ st.plotly_chart(fig3, width='stretch')
 # RAW DATA
 # =========================
 
-st.subheader("📋 Raw Data")
+st.subheader(" Raw Data")
 
 st.dataframe(df_filtered, use_container_width=True)
