@@ -77,7 +77,7 @@ df_filtered["Month"] = df_filtered[date_col].dt.strftime("%b %Y")
 # Count errors month-wise
 monthly_errors = (
     df_filtered
-    .groupby(pd.Grouper(key=date_col, freq='M'))
+    .groupby(pd.Grouper(key=date_col, freq='ME'))
     .size()
     .reset_index(name='Error Count')
 )
