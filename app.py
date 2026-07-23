@@ -4,7 +4,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="Error Analytics Dashboard", layout="wide")
 
-st.title("📊 Error Analytics Dashboard")
+st.title(" Error Analytics Dashboard")
 
 # Google Sheet CSV URL
 url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/export?format=csv"
@@ -92,7 +92,7 @@ monthly_errors = monthly_errors.sort_values(date_col)
 
 monthly_errors["Month"] = monthly_errors[date_col].dt.strftime("%b %Y")
 
-st.subheader("📅 Month-wise Error Count")
+st.subheader(" Month-wise Error Count")
 
 fig_month = px.bar(
     monthly_errors,
@@ -112,7 +112,7 @@ st.plotly_chart(fig_month, width="stretch")
 
 # ---------------- ERROR BY ---------------- #
 
-st.subheader("👤 Error By")
+st.subheader(" Error By")
 
 error_by = (
     df_filtered["Error By"]
@@ -202,6 +202,6 @@ if category_col:
 
 # ---------------- RAW DATA ---------------- #
 
-st.subheader("📋 Raw Data")
+st.subheader(" Raw Data")
 
 st.dataframe(df_filtered, width="stretch")
