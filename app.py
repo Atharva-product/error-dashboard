@@ -4,38 +4,54 @@ import plotly.express as px
 
 st.set_page_config(page_title="Error Analytics Dashboard", layout="wide")
 
-st.title(" Error Analytics Dashboard")
+st.title("📊 Error Analytics Dashboard")
 
-
+# Google Sheet CSV URL
 url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/export?format=csv"
 
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=60)
 def load_data():
-    df = pd.read_csv(url)
+    # Skip first two rows because actual headers start from row 3
+    df = pd.read_csv(url, header=2)
 
-    # Remove extra spaces
-    df.columns = df.columns.str.strip()
+    # Clean column names
+    df.columns = (
+        df.columns
+        .str.strip()
+        .str.replace("*", "", regex=False)
+    )
 
     return df
 
+
 df = load_data()
 
+# ---------------- FIND DATE COLUMN ---------------- #
 
 date_col = None
+
 for col in df.columns:
     if "date" in col.lower():
         date_col = col
         break
 
+if date_col is None:
+    st.error("Date column not found.")
+    st.write("Columns detected:", df.columns.tolist())
+    st.stop()
+
+# ---------------- DATE CONVERSION ---------------- #
 
 df[date_col] = pd.to_datetime(
     df[date_col],
     dayfirst=True,
-    errors='coerce'
+    errors="coerce"
 )
 
 df = df.dropna(subset=[date_col])
+
+# ---------------- SIDEBAR ---------------- #
 
 st.sidebar.header("Filters")
 
@@ -44,12 +60,12 @@ max_date = df[date_col].max().date()
 
 date_range = st.sidebar.date_input(
     "Select Date Range",
-    [min_date, max_date]
+    value=(min_date, max_date)
 )
 
 if len(date_range) == 1:
-    start_date = end_date = pd.to_datetime(date_range[0])
-
+    start_date = pd.to_datetime(date_range[0])
+    end_date = start_date
 else:
     start_date = pd.to_datetime(date_range[0])
     end_date = pd.to_datetime(date_range[1])
@@ -60,21 +76,23 @@ df_filtered = df[
 ]
 
 if df_filtered.empty:
-    st.warning(" No Error Found For Selected Date Range")
+    st.warning("No Error Found For Selected Date Range")
     st.stop()
 
-df_filtered["Month"] = df_filtered[date_col].dt.strftime("%b %Y")
+# ---------------- MONTHLY CHART ---------------- #
 
 monthly_errors = (
     df_filtered
-    .groupby(pd.Grouper(key=date_col, freq='ME'))
+    .groupby(pd.Grouper(key=date_col, freq="MS"))
     .size()
-    .reset_index(name='Error Count')
+    .reset_index(name="Error Count")
 )
+
+monthly_errors = monthly_errors.sort_values(date_col)
 
 monthly_errors["Month"] = monthly_errors[date_col].dt.strftime("%b %Y")
 
-st.subheader(" Month-wise Error Count")
+st.subheader("📅 Month-wise Error Count")
 
 fig_month = px.bar(
     monthly_errors,
@@ -90,11 +108,19 @@ fig_month.update_layout(
     yaxis_title="Error Count"
 )
 
-st.plotly_chart(fig_month, width='stretch')
+st.plotly_chart(fig_month, width="stretch")
 
-st.subheader(" Error By")
+# ---------------- ERROR BY ---------------- #
 
-error_by = df_filtered["Error By"].value_counts().reset_index()
+st.subheader("👤 Error By")
+
+error_by = (
+    df_filtered["Error By"]
+    .fillna("Unknown")
+    .value_counts()
+    .reset_index()
+)
+
 error_by.columns = ["Person", "Error Count"]
 
 fig1 = px.bar(
@@ -106,58 +132,76 @@ fig1 = px.bar(
     title="Errors By Person"
 )
 
-fig1.update_layout(
-    xaxis_title="Person",
-    yaxis_title="Number of Errors"
-)
+st.plotly_chart(fig1, width="stretch")
 
-st.plotly_chart(fig1, width='stretch')
+# ---------------- CONFIRMATION ---------------- #
 
-st.subheader(" Confirmation Received From Person Who Made Error")
+confirmation_col = None
 
-confirmation = df_filtered[
-    "Confirmation received from person who made error"
-].value_counts().reset_index()
+for col in df.columns:
+    if "confirmation" in col.lower():
+        confirmation_col = col
+        break
 
-confirmation.columns = ["Person", "Count"]
+if confirmation_col:
 
-fig2 = px.bar(
-    confirmation,
-    x="Person",
-    y="Count",
-    text="Count",
-    color="Count",
-    title="Confirmation Received Analysis"
-)
+    st.subheader(" Confirmation Received From Person Who Made Error")
 
-fig2.update_layout(
-    xaxis_title="Person",
-    yaxis_title="Count"
-)
+    confirmation = (
+        df_filtered[confirmation_col]
+        .fillna("Unknown")
+        .value_counts()
+        .reset_index()
+    )
 
-st.plotly_chart(fig2, width='stretch')
+    confirmation.columns = ["Person", "Count"]
 
-st.subheader(" Category Analysis")
+    fig2 = px.bar(
+        confirmation,
+        x="Person",
+        y="Count",
+        text="Count",
+        color="Count",
+        title="Confirmation Received Analysis"
+    )
 
-category = df_filtered["Category"].value_counts().reset_index()
-category.columns = ["Category", "Count"]
+    st.plotly_chart(fig2, width="stretch")
 
-fig3 = px.bar(
-    category,
-    x="Category",
-    y="Count",
-    text="Count",
-    color="Count",
-    title="Category-wise Error Analysis"
-)
+# ---------------- CATEGORY ---------------- #
 
-fig3.update_layout(
-    xaxis_title="Category",
-    yaxis_title="Number of Errors"
-)
+category_col = None
 
-st.plotly_chart(fig3, width='stretch')
+for col in df.columns:
+    if "category" in col.lower():
+        category_col = col
+        break
 
-st.subheader(" Raw Data")
+if category_col:
 
-st.dataframe(df_filtered, use_container_width=True)
+    st.subheader(" Category Analysis")
+
+    category = (
+        df_filtered[category_col]
+        .fillna("Unknown")
+        .value_counts()
+        .reset_index()
+    )
+
+    category.columns = ["Category", "Count"]
+
+    fig3 = px.bar(
+        category,
+        x="Category",
+        y="Count",
+        text="Count",
+        color="Count",
+        title="Category-wise Error Analysis"
+    )
+
+    st.plotly_chart(fig3, width="stretch")
+
+# ---------------- RAW DATA ---------------- #
+
+st.subheader("📋 Raw Data")
+
+st.dataframe(df_filtered, width="stretch")
