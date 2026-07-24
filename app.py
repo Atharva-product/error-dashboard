@@ -5,39 +5,32 @@ import streamlit as st
 st.set_page_config(page_title="Error Analytics Dashboard", layout="wide")
 st.title(" Error Analytics Dashboard")
 
-# Google Sheet CSV Export URL (gid=0 explicitly points to the main sheet)
 url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/export?format=csv&gid=0"
 
 
-@st.cache_data(ttl=60)
+# Temporarily removed cache decorator to ensure fresh data fetch
 def load_data():
-  # Header is on Row 3 (0-indexed position is 2)
   df = pd.read_csv(url, header=2)
-
-  # Clean column names by removing whitespace
   df.columns = df.columns.str.strip()
   return df
 
 
 df = load_data()
 
-# ---------------- FIND DATE COLUMN ---------------- #
-date_col = None
-for col in df.columns:
-  if "date" in str(col).lower():
-    date_col = col
-    break
+# Find date column
+date_col = next(
+    (col for col in df.columns if "date" in str(col).lower()), None
+)
 
 if date_col is None:
   st.error("Date column not found.")
-  st.write("Columns detected:", df.columns.tolist())
   st.stop()
 
-# ---------------- DATE CONVERSION ---------------- #
-df[date_col] = pd.to_datetime(df[date_col], dayfirst=True, errors="coerce")
+# Parse dates flexibly (handles mixed formats & times)
+df[date_col] = pd.to_datetime(df[date_col], format="mixed", errors="coerce")
 df = df.dropna(subset=[date_col])
 
-# ---------------- SIDEBAR FILTERS ---------------- #
+# Sidebar Date Filter
 st.sidebar.header("Filters")
 min_date = df[date_col].min().date()
 max_date = df[date_col].max().date()
@@ -47,11 +40,19 @@ date_range = st.sidebar.date_input(
 )
 
 if len(date_range) == 1:
-  start_date = pd.to_datetime(date_range[0])
-  end_date = start_date
+  start_date = pd.to_datetime(date_range[0]).replace(
+      hour=0, minute=0, second=0
+  )
+  end_date = pd.to_datetime(date_range[0]).replace(
+      hour=23, minute=59, second=59
+  )
 else:
-  start_date = pd.to_datetime(date_range[0])
-  end_date = pd.to_datetime(date_range[1])
+  start_date = pd.to_datetime(date_range[0]).replace(
+      hour=0, minute=0, second=0
+  )
+  end_date = pd.to_datetime(date_range[1]).replace(
+      hour=23, minute=59, second=59
+  )
 
 df_filtered = df[
     (df[date_col] >= start_date) & (df[date_col] <= end_date)
