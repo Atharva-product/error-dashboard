@@ -5,12 +5,12 @@ import streamlit as st
 st.set_page_config(page_title="Error Analytics Dashboard", layout="wide")
 st.title(" Error Analytics Dashboard")
 
-# Direct CSV export link pointing specifically to base data sheet (gid=0)
+# Google Sheet CSV Export Link
 url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/export?format=csv&gid=0"
 
 
 def load_data():
-  # Header starts on Row 3 (0-index 2)
+  # Header starts on Row 3 (index 2)
   df = pd.read_csv(url, header=2)
   df.columns = df.columns.str.strip()
   return df
@@ -18,7 +18,7 @@ def load_data():
 
 df = load_data()
 
-# Identify Date column
+# Identify Date column dynamically
 date_col = next(
     (col for col in df.columns if "date" in str(col).lower()), None
 )
@@ -27,11 +27,17 @@ if date_col is None:
   st.error("Date column not found.")
   st.stop()
 
-# Force DD-MM-YYYY parsing (fixes July and day/month swapping issues)
-df[date_col] = pd.to_datetime(df[date_col], dayfirst=True, errors="coerce")
+# ---------------- ROBUST DATE PARSING ---------------- #
+# Clean string whitespace first
+df[date_col] = df[date_col].astype(str).str.strip()
+
+# Parse mixed date formats (DD-MM-YYYY, YYYY-MM-DD, etc.) without coercing July to NaT
+df[date_col] = pd.to_datetime(
+    df[date_col], format="mixed", dayfirst=True, errors="coerce"
+)
 df = df.dropna(subset=[date_col])
 
-# Create a clean display date column formatted as YYYY-MM-DD
+# Formatted display date string
 df["Formatted Date"] = df[date_col].dt.strftime("%Y-%m-%d")
 
 # ---------------- SIDEBAR FILTERS ---------------- #
@@ -40,12 +46,13 @@ st.sidebar.header("Filters")
 data_min_date = df[date_col].min().date()
 data_max_date = df[date_col].max().date()
 
+# Force key update so Streamlit picks up the new max date automatically
 date_range = st.sidebar.date_input(
     "Select Date Range",
     value=(data_min_date, data_max_date),
     min_value=data_min_date,
     max_value=data_max_date,
-    key="date_range_picker_v2",  # Key forces Streamlit to reset saved state
+    key="date_range_picker_v3",
 )
 
 if len(date_range) == 2:
