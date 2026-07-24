@@ -10,7 +10,7 @@ st.title(" Error Analytics Dashboard")
 url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/export?format=csv&gid=0"
 
 
-@st.cache_data(ttl=60)
+# @st.cache_data(ttl=60)
 def load_data():
     # Read EVERYTHING without treating any row as header
     df = pd.read_csv(url, header=None)
