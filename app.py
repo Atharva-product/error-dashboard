@@ -30,16 +30,30 @@ if date_col is None:
 df[date_col] = pd.to_datetime(df[date_col], format="mixed", errors="coerce")
 df = df.dropna(subset=[date_col])
 
-# Sidebar Date Filter
+# ---------------- SIDEBAR FILTERS ---------------- #
 st.sidebar.header("Filters")
-min_date = df[date_col].min().date()
-max_date = df[date_col].max().date()
 
+# Extract exact min and max dates from the dataset
+data_min_date = df[date_col].min().date()
+data_max_date = df[date_col].max().date()
+
+# Pass min_value and max_value to restrict selection within dataset limits
 date_range = st.sidebar.date_input(
-    "Select Date Range", value=(min_date, max_date)
+    "Select Date Range",
+    value=(data_min_date, data_max_date),
+    min_value=data_min_date,
+    max_value=data_max_date,
 )
 
-if len(date_range) == 1:
+# Ensure start and end cover full days
+if len(date_range) == 2:
+  start_date = pd.to_datetime(date_range[0]).replace(
+      hour=0, minute=0, second=0
+  )
+  end_date = pd.to_datetime(date_range[1]).replace(
+      hour=23, minute=59, second=59
+  )
+elif len(date_range) == 1:
   start_date = pd.to_datetime(date_range[0]).replace(
       hour=0, minute=0, second=0
   )
@@ -47,10 +61,10 @@ if len(date_range) == 1:
       hour=23, minute=59, second=59
   )
 else:
-  start_date = pd.to_datetime(date_range[0]).replace(
+  start_date = pd.to_datetime(data_min_date).replace(
       hour=0, minute=0, second=0
   )
-  end_date = pd.to_datetime(date_range[1]).replace(
+  end_date = pd.to_datetime(data_max_date).replace(
       hour=23, minute=59, second=59
   )
 
