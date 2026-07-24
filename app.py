@@ -8,7 +8,6 @@ st.title(" Error Analytics Dashboard")
 url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/export?format=csv&gid=0"
 
 
-# Temporarily removed cache decorator to ensure fresh data fetch
 def load_data():
   df = pd.read_csv(url, header=2)
   df.columns = df.columns.str.strip()
@@ -26,9 +25,12 @@ if date_col is None:
   st.error("Date column not found.")
   st.stop()
 
-# Parse dates flexibly (handles mixed formats & times)
-df[date_col] = pd.to_datetime(df[date_col], format="mixed", errors="coerce")
+# FORCE DAY FIRST PARSING (Fixes DD-MM-YYYY vs YYYY-MM-DD issue)
+df[date_col] = pd.to_datetime(df[date_col], dayfirst=True, errors="coerce")
 df = df.dropna(subset=[date_col])
+
+# Format date column for clean display in raw data table (YYYY-MM-DD)
+df["Display Date"] = df[date_col].dt.strftime("%Y-%m-%d")
 
 # ---------------- SIDEBAR FILTERS ---------------- #
 st.sidebar.header("Filters")
