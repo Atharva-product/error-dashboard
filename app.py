@@ -12,15 +12,11 @@ url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijI
 
 @st.cache_data(ttl=60)
 def load_data():
-    # Skip first two rows because actual headers start from row 3
-    df = pd.read_csv(url, header=2)
+    # Read EVERYTHING without treating any row as header
+    df = pd.read_csv(url, header=None)
 
-    # Clean column names
-    df.columns = (
-        df.columns
-        .str.strip()
-        .str.replace("*", "", regex=False)
-    )
+    st.subheader("Raw CSV Data (Last 30 Rows)")
+    st.dataframe(df.tail(30), width="stretch")
 
     return df
 
