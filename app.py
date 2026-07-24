@@ -7,7 +7,7 @@ st.set_page_config(page_title="Error Analytics Dashboard", layout="wide")
 st.title(" Error Analytics Dashboard")
 
 # Google Sheet CSV URL
-url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/edit?gid=0#gid=0"
+url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/export?format=csv&gid=0"
 
 
 @st.cache_data(ttl=60)
