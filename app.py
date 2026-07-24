@@ -45,6 +45,7 @@ date_range = st.sidebar.date_input(
     value=(data_min_date, data_max_date),
     min_value=data_min_date,
     max_value=data_max_date,
+    key="date_range_picker_v2",  # Key forces Streamlit to reset saved state
 )
 
 if len(date_range) == 2:
