@@ -48,6 +48,8 @@ df[date_col] = pd.to_datetime(
     dayfirst=True,
     errors="coerce"
 )
+st.write("Latest Date:", df[date_col].max())
+st.write(df[[date_col]].tail(20))
 
 df = df.dropna(subset=[date_col])
 
