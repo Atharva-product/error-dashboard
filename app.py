@@ -23,6 +23,11 @@ def load_data():
 
 df = load_data()
 
+st.write("Columns:")
+st.write(df.columns.tolist())
+
+st.write(df.head())
+
 # ---------------- FIND DATE COLUMN ---------------- #
 
 date_col = None
