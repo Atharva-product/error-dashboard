@@ -75,13 +75,15 @@ df_filtered = df[
 if df_filtered.empty:
   st.warning("No Error Found For Selected Date Range")
   st.stop()
-
 # ---------------- MONTHLY CHART ---------------- #
 monthly_errors = (
     df_filtered.groupby(pd.Grouper(key=date_col, freq="MS"))
     .size()
     .reset_index(name="Error Count")
 )
+
+# Keep only months that actually have data
+monthly_errors = monthly_errors[monthly_errors["Error Count"] > 0]
 monthly_errors = monthly_errors.sort_values(date_col)
 monthly_errors["Month"] = monthly_errors[date_col].dt.strftime("%b %Y")
 
@@ -94,8 +96,13 @@ fig_month = px.bar(
     color="Error Count",
     title="Month-wise Error Analysis",
 )
+
+# Force the X-axis to treat months as categorical labels (prevents Plotly from padding empty future months)
+fig_month.update_xaxes(type="category")
 fig_month.update_layout(xaxis_title="Month", yaxis_title="Error Count")
+
 st.plotly_chart(fig_month, use_container_width=True)
+
 
 # ---------------- ERROR BY ---------------- #
 if "Error By" in df_filtered.columns:
