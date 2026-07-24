@@ -12,8 +12,6 @@ url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijI
 
 @st.cache_data(ttl=60)
 def load_data():
-    st.write("Latest Date:", df[date_col].max())
-    st.write(df[[date_col]].tail(20))
     # Skip first two rows because actual headers start from row 3
     df = pd.read_csv(url, header=2)
 
