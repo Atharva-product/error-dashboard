@@ -44,7 +44,7 @@ date_range = st.sidebar.date_input(
     value=(data_min_date, data_max_date),
     min_value=data_min_date,
     max_value=data_max_date,
-    key="date_range_picker_v4",
+    key="date_range_picker_v5",
 )
 
 if len(date_range) == 2:
@@ -95,7 +95,10 @@ monthly_order = (
 )
 
 st.subheader(" Month-wise Error Count")
-st.caption("💡 *Click on any bar in the chart below to filter the entire dashboard by that month!*")
+st.caption(
+    "💡 *Click on any bar in the chart below to filter the entire dashboard by"
+    " that month!*"
+)
 
 fig_month = px.bar(
     monthly_errors,
@@ -110,7 +113,7 @@ fig_month.update_xaxes(type="category")
 fig_month.update_layout(
     xaxis_title="Month",
     yaxis_title="Error Count",
-    clickmode="event+select",  # Enable click selection on bars
+    clickmode="event+select",
 )
 
 # Render chart with selection event enabled
@@ -129,14 +132,17 @@ if selected_month_event and "selection" in selected_month_event:
     selected_month = points[0].get("x")
 
 if selected_month:
-  st.info(f" Selected Month Filter: **{selected_month}** (Click anywhere on chart background to reset filter)")
+  st.info(
+      f" Selected Month Filter: **{selected_month}** (Click anywhere on chart"
+      " background to reset filter)"
+  )
   df_display_filtered = df_filtered[
       df_filtered["Month_Year"] == selected_month
   ].copy()
 else:
   df_display_filtered = df_filtered.copy()
 
-# ---------------- ERROR BY ---------------- #
+# ---------------- ERROR BY (DISPLAYED DIRECTLY BELOW MONTHLY CHART) ---------------- #
 if "Error By" in df_display_filtered.columns:
   st.subheader(" Error By")
   error_by = (
@@ -156,7 +162,7 @@ if "Error By" in df_display_filtered.columns:
   )
   st.plotly_chart(fig1, use_container_width=True)
 
-# ---------------- CONFIRMATION ---------------- #
+# ---------------- CONFIRMATION RECEIVED ---------------- #
 confirmation_col = next(
     (col for col in df.columns if "confirmation" in col.lower()), None
 )
@@ -179,7 +185,7 @@ if confirmation_col:
   )
   st.plotly_chart(fig2, use_container_width=True)
 
-# ---------------- CATEGORY ---------------- #
+# ---------------- CATEGORY ANALYSIS ---------------- #
 category_col = next(
     (col for col in df.columns if "category" in col.lower()), None
 )
