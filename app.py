@@ -140,11 +140,15 @@ if selected_month:
 else:
   df_display_filtered = df_filtered.copy()
 
-# ---------------- 2. ERROR BY CHART (PLACED RIGHT AFTER MONTH-WISE ERROR COUNT) ---------------- #
-if "Error By" in df_display_filtered.columns:
+# ---------------- 2. ERROR BY CHART (FLEXIBLE COLUMN MATCHING) ---------------- #
+error_by_col = next(
+    (col for col in df.columns if "error by" in col.lower()), None
+)
+
+if error_by_col:
   st.subheader(" Error By")
   error_by = (
-      df_display_filtered["Error By"]
+      df_display_filtered[error_by_col]
       .fillna("Unknown")
       .value_counts()
       .reset_index()
@@ -159,6 +163,12 @@ if "Error By" in df_display_filtered.columns:
       title="Errors By Person",
   )
   st.plotly_chart(fig1, use_container_width=True)
+else:
+  # Helpful fallback message if the column name cannot be detected
+  st.warning(
+      "Could not detect 'Error By' column. Available columns:"
+      f" {list(df.columns)}"
+  )
 
 # ---------------- 3. CONFIRMATION RECEIVED CHART ---------------- #
 confirmation_col = next(
