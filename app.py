@@ -108,65 +108,70 @@ fig_month.update_xaxes(type="category")
 fig_month.update_layout(xaxis_title="Month", yaxis_title="Error Count")
 st.plotly_chart(fig_month, use_container_width=True)
 
-# ---------------- ERROR BY ---------------- #
-if "Error By" in df_filtered.columns:
-  st.subheader(" Error By")
-  error_by = (
-      df_filtered["Error By"].fillna("Unknown").value_counts().reset_index()
-  )
-  error_by.columns = ["Person", "Error Count"]
-  fig1 = px.bar(
-      error_by,
-      x="Person",
-      y="Error Count",
-      text="Error Count",
-      color="Error Count",
-      title="Errors By Person",
-  )
-  st.plotly_chart(fig1, use_container_width=True)
+# Create a Month column for grouping
+df_filtered["Month_Year"] = df_filtered[date_col].dt.strftime("%b %Y")
 
-# ---------------- CONFIRMATION ---------------- #
+# Sort months chronologically
+df_filtered = df_filtered.sort_values(by=date_col)
+
+# ---------------- MONTHLY CONFIRMATION ANALYSIS ---------------- #
 confirmation_col = next(
     (col for col in df.columns if "confirmation" in col.lower()), None
 )
-if confirmation_col:
-  st.subheader(" Confirmation Received From Person Who Made Error")
-  confirmation = (
-      df_filtered[confirmation_col]
-      .fillna("Unknown")
-      .value_counts()
-      .reset_index()
-  )
-  confirmation.columns = ["Person", "Count"]
-  fig2 = px.bar(
-      confirmation,
-      x="Person",
-      y="Count",
-      text="Count",
-      color="Count",
-      title="Confirmation Received Analysis",
-  )
-  st.plotly_chart(fig2, use_container_width=True)
 
-# ---------------- CATEGORY ---------------- #
+if confirmation_col:
+  st.subheader(" Monthly Confirmation Received Breakdown")
+
+  # Group by Month and Confirmation Status
+  monthly_conf = (
+      df_filtered.groupby(["Month_Year", confirmation_col], sort=False)
+      .size()
+      .reset_index(name="Count")
+  )
+
+  # Plot Stacked/Grouped Bar Chart
+  fig_monthly_conf = px.bar(
+      monthly_conf,
+      x="Month_Year",
+      y="Count",
+      color=confirmation_col,
+      barmode="group",  # Use 'stack' for stacked bars or 'group' for side-by-side
+      text="Count",
+      title="Monthly Confirmation Status Breakdown",
+      labels={"Month_Year": "Month", confirmation_col: "Confirmation Received"},
+  )
+  fig_monthly_conf.update_xaxes(type="category")
+  st.plotly_chart(fig_monthly_conf, use_container_width=True)
+
+
+# ---------------- MONTHLY CATEGORY ANALYSIS ---------------- #
 category_col = next(
     (col for col in df.columns if "category" in col.lower()), None
 )
+
 if category_col:
-  st.subheader(" Category Analysis")
-  category = (
-      df_filtered[category_col].fillna("Unknown").value_counts().reset_index()
+  st.subheader(" Monthly Category Breakdown")
+
+  # Group by Month and Category
+  monthly_cat = (
+      df_filtered.groupby(["Month_Year", category_col], sort=False)
+      .size()
+      .reset_index(name="Count")
   )
-  category.columns = ["Category", "Count"]
-  fig3 = px.bar(
-      category,
-      x="Category",
+
+  # Plot Stacked/Grouped Bar Chart
+  fig_monthly_cat = px.bar(
+      monthly_cat,
+      x="Month_Year",
       y="Count",
+      color=category_col,
+      barmode="stack",  # Stacked bars work great for category breakdown
       text="Count",
-      color="Count",
-      title="Category-wise Error Analysis",
+      title="Monthly Category Breakdown",
+      labels={"Month_Year": "Month", category_col: "Category"},
   )
-  st.plotly_chart(fig3, use_container_width=True)
+  fig_monthly_cat.update_xaxes(type="category")
+  st.plotly_chart(fig_monthly_cat, use_container_width=True)
 
 # ---------------- RAW DATA ---------------- #
 st.subheader(" Raw Data")
