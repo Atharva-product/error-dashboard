@@ -5,12 +5,10 @@ import streamlit as st
 st.set_page_config(page_title="Error Analytics Dashboard", layout="wide")
 st.title(" Error Analytics Dashboard")
 
-# Google Sheet CSV Export Link
 url = "https://docs.google.com/spreadsheets/d/1IihQE0Myys72Ezxhk3OA_kdlmfsjZ2ijIhqTAhYNRYA/export?format=csv&gid=0"
 
 
 def load_data():
-  # Header starts on Row 3 (index 2)
   df = pd.read_csv(url, header=2)
   df.columns = df.columns.str.strip()
   return df
@@ -18,7 +16,7 @@ def load_data():
 
 df = load_data()
 
-# Identify Date column dynamically
+# Identify Date column
 date_col = next(
     (col for col in df.columns if "date" in str(col).lower()), None
 )
@@ -27,17 +25,12 @@ if date_col is None:
   st.error("Date column not found.")
   st.stop()
 
-# ---------------- ROBUST DATE PARSING ---------------- #
-# Clean string whitespace first
+# Robust Date Parsing
 df[date_col] = df[date_col].astype(str).str.strip()
-
-# Parse mixed date formats (DD-MM-YYYY, YYYY-MM-DD, etc.) without coercing July to NaT
 df[date_col] = pd.to_datetime(
     df[date_col], format="mixed", dayfirst=True, errors="coerce"
 )
 df = df.dropna(subset=[date_col])
-
-# Formatted display date string
 df["Formatted Date"] = df[date_col].dt.strftime("%Y-%m-%d")
 
 # ---------------- SIDEBAR FILTERS ---------------- #
@@ -46,13 +39,12 @@ st.sidebar.header("Filters")
 data_min_date = df[date_col].min().date()
 data_max_date = df[date_col].max().date()
 
-# Force key update so Streamlit picks up the new max date automatically
 date_range = st.sidebar.date_input(
     "Select Date Range",
     value=(data_min_date, data_max_date),
     min_value=data_min_date,
     max_value=data_max_date,
-    key="date_range_picker_v3",
+    key="date_range_picker_v4",
 )
 
 if len(date_range) == 2:
@@ -85,99 +77,137 @@ if df_filtered.empty:
   st.warning("No Error Found For Selected Date Range")
   st.stop()
 
-# ---------------- MONTHLY CHART ---------------- #
+# Create Month Year column for grouping and filtering
+df_filtered["Month_Year"] = df_filtered[date_col].dt.strftime("%b %Y")
+
+# ---------------- MONTHLY CHART WITH SELECTION ---------------- #
 monthly_errors = (
-    df_filtered.groupby(pd.Grouper(key=date_col, freq="MS"))
+    df_filtered.groupby("Month_Year", sort=False)
     .size()
     .reset_index(name="Error Count")
 )
-monthly_errors = monthly_errors[monthly_errors["Error Count"] > 0]
-monthly_errors = monthly_errors.sort_values(date_col)
-monthly_errors["Month"] = monthly_errors[date_col].dt.strftime("%b %Y")
+# Ensure chronological ordering
+monthly_order = (
+    df_filtered.groupby("Month_Year")[date_col]
+    .min()
+    .sort_values()
+    .index.tolist()
+)
 
 st.subheader(" Month-wise Error Count")
+st.caption("💡 *Click on any bar in the chart below to filter the entire dashboard by that month!*")
+
 fig_month = px.bar(
     monthly_errors,
-    x="Month",
+    x="Month_Year",
     y="Error Count",
     text="Error Count",
     color="Error Count",
+    category_orders={"Month_Year": monthly_order},
     title="Month-wise Error Analysis",
 )
 fig_month.update_xaxes(type="category")
-fig_month.update_layout(xaxis_title="Month", yaxis_title="Error Count")
-st.plotly_chart(fig_month, use_container_width=True)
+fig_month.update_layout(
+    xaxis_title="Month",
+    yaxis_title="Error Count",
+    clickmode="event+select",  # Enable click selection on bars
+)
 
-# Create a Month column for grouping
-df_filtered["Month_Year"] = df_filtered[date_col].dt.strftime("%b %Y")
+# Render chart with selection event enabled
+selected_month_event = st.plotly_chart(
+    fig_month,
+    use_container_width=True,
+    on_select="rerun",
+    key="monthly_bar_chart",
+)
 
-# Sort months chronologically
-df_filtered = df_filtered.sort_values(by=date_col)
+# ---------------- FILTER DASHBOARD BY CLICKED MONTH ---------------- #
+selected_month = None
+if selected_month_event and "selection" in selected_month_event:
+  points = selected_month_event["selection"].get("points", [])
+  if points:
+    selected_month = points[0].get("x")
 
-# ---------------- MONTHLY CONFIRMATION ANALYSIS ---------------- #
+if selected_month:
+  st.info(f" Selected Month Filter: **{selected_month}** (Click anywhere on chart background to reset filter)")
+  df_display_filtered = df_filtered[
+      df_filtered["Month_Year"] == selected_month
+  ].copy()
+else:
+  df_display_filtered = df_filtered.copy()
+
+# ---------------- ERROR BY ---------------- #
+if "Error By" in df_display_filtered.columns:
+  st.subheader(" Error By")
+  error_by = (
+      df_display_filtered["Error By"]
+      .fillna("Unknown")
+      .value_counts()
+      .reset_index()
+  )
+  error_by.columns = ["Person", "Error Count"]
+  fig1 = px.bar(
+      error_by,
+      x="Person",
+      y="Error Count",
+      text="Error Count",
+      color="Error Count",
+      title="Errors By Person",
+  )
+  st.plotly_chart(fig1, use_container_width=True)
+
+# ---------------- CONFIRMATION ---------------- #
 confirmation_col = next(
     (col for col in df.columns if "confirmation" in col.lower()), None
 )
-
 if confirmation_col:
-  st.subheader(" Monthly Confirmation Received Breakdown")
-
-  # Group by Month and Confirmation Status
-  monthly_conf = (
-      df_filtered.groupby(["Month_Year", confirmation_col], sort=False)
-      .size()
-      .reset_index(name="Count")
+  st.subheader(" Confirmation Received From Person Who Made Error")
+  confirmation = (
+      df_display_filtered[confirmation_col]
+      .fillna("Unknown")
+      .value_counts()
+      .reset_index()
   )
-
-  # Plot Stacked/Grouped Bar Chart
-  fig_monthly_conf = px.bar(
-      monthly_conf,
-      x="Month_Year",
+  confirmation.columns = ["Person", "Count"]
+  fig2 = px.bar(
+      confirmation,
+      x="Person",
       y="Count",
-      color=confirmation_col,
-      barmode="group",  # Use 'stack' for stacked bars or 'group' for side-by-side
       text="Count",
-      title="Monthly Confirmation Status Breakdown",
-      labels={"Month_Year": "Month", confirmation_col: "Confirmation Received"},
+      color="Count",
+      title="Confirmation Received Analysis",
   )
-  fig_monthly_conf.update_xaxes(type="category")
-  st.plotly_chart(fig_monthly_conf, use_container_width=True)
+  st.plotly_chart(fig2, use_container_width=True)
 
-
-# ---------------- MONTHLY CATEGORY ANALYSIS ---------------- #
+# ---------------- CATEGORY ---------------- #
 category_col = next(
     (col for col in df.columns if "category" in col.lower()), None
 )
-
 if category_col:
-  st.subheader(" Monthly Category Breakdown")
-
-  # Group by Month and Category
-  monthly_cat = (
-      df_filtered.groupby(["Month_Year", category_col], sort=False)
-      .size()
-      .reset_index(name="Count")
+  st.subheader(" Category Analysis")
+  category = (
+      df_display_filtered[category_col]
+      .fillna("Unknown")
+      .value_counts()
+      .reset_index()
   )
-
-  # Plot Stacked/Grouped Bar Chart
-  fig_monthly_cat = px.bar(
-      monthly_cat,
-      x="Month_Year",
+  category.columns = ["Category", "Count"]
+  fig3 = px.bar(
+      category,
+      x="Category",
       y="Count",
-      color=category_col,
-      barmode="stack",  # Stacked bars work great for category breakdown
       text="Count",
-      title="Monthly Category Breakdown",
-      labels={"Month_Year": "Month", category_col: "Category"},
+      color="Count",
+      title="Category-wise Error Analysis",
   )
-  fig_monthly_cat.update_xaxes(type="category")
-  st.plotly_chart(fig_monthly_cat, use_container_width=True)
+  st.plotly_chart(fig3, use_container_width=True)
 
 # ---------------- RAW DATA ---------------- #
 st.subheader(" Raw Data")
-# Overwrite the date column in raw view with the formatted string date
-df_display = df_filtered.copy()
+df_display = df_display_filtered.copy()
 df_display[date_col] = df_display["Formatted Date"]
-df_display = df_display.drop(columns=["Formatted Date"])
+df_display = df_display.drop(
+    columns=["Formatted Date", "Month_Year"], errors="ignore"
+)
 
 st.dataframe(df_display, use_container_width=True)
