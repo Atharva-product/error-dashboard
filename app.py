@@ -44,7 +44,7 @@ date_range = st.sidebar.date_input(
     value=(data_min_date, data_max_date),
     min_value=data_min_date,
     max_value=data_max_date,
-    key="date_range_picker_v5",
+    key="date_range_picker_v6",
 )
 
 if len(date_range) == 2:
@@ -80,13 +80,12 @@ if df_filtered.empty:
 # Create Month Year column for grouping and filtering
 df_filtered["Month_Year"] = df_filtered[date_col].dt.strftime("%b %Y")
 
-# ---------------- MONTHLY CHART WITH SELECTION ---------------- #
+# ---------------- 1. MONTH-WISE ERROR COUNT CHART ---------------- #
 monthly_errors = (
     df_filtered.groupby("Month_Year", sort=False)
     .size()
     .reset_index(name="Error Count")
 )
-# Ensure chronological ordering
 monthly_order = (
     df_filtered.groupby("Month_Year")[date_col]
     .min()
@@ -116,7 +115,6 @@ fig_month.update_layout(
     clickmode="event+select",
 )
 
-# Render chart with selection event enabled
 selected_month_event = st.plotly_chart(
     fig_month,
     use_container_width=True,
@@ -142,7 +140,7 @@ if selected_month:
 else:
   df_display_filtered = df_filtered.copy()
 
-# ---------------- ERROR BY (DISPLAYED DIRECTLY BELOW MONTHLY CHART) ---------------- #
+# ---------------- 2. ERROR BY CHART (PLACED RIGHT AFTER MONTH-WISE ERROR COUNT) ---------------- #
 if "Error By" in df_display_filtered.columns:
   st.subheader(" Error By")
   error_by = (
@@ -162,7 +160,7 @@ if "Error By" in df_display_filtered.columns:
   )
   st.plotly_chart(fig1, use_container_width=True)
 
-# ---------------- CONFIRMATION RECEIVED ---------------- #
+# ---------------- 3. CONFIRMATION RECEIVED CHART ---------------- #
 confirmation_col = next(
     (col for col in df.columns if "confirmation" in col.lower()), None
 )
@@ -185,7 +183,7 @@ if confirmation_col:
   )
   st.plotly_chart(fig2, use_container_width=True)
 
-# ---------------- CATEGORY ANALYSIS ---------------- #
+# ---------------- 4. CATEGORY ANALYSIS CHART ---------------- #
 category_col = next(
     (col for col in df.columns if "category" in col.lower()), None
 )
@@ -208,7 +206,7 @@ if category_col:
   )
   st.plotly_chart(fig3, use_container_width=True)
 
-# ---------------- RAW DATA ---------------- #
+# ---------------- 5. RAW DATA ---------------- #
 st.subheader(" Raw Data")
 df_display = df_display_filtered.copy()
 df_display[date_col] = df_display["Formatted Date"]
