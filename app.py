@@ -139,60 +139,7 @@ if selected_month:
   ].copy()
 else:
   df_display_filtered = df_filtered.copy()
-# ---------------- 2. FINANCIAL QUARTERLY ERROR ANALYSIS ---------------- #
-if error_by_col:
-  st.subheader(" Quarterly Error Analysis (Person vs Month)")
 
-  # Helper function to compute Financial Quarter (Q1: Apr-Jun, Q2: Jul-Sep, Q3: Oct-Dec, Q4: Jan-Mar)
-  def get_fq(dt):
-    month = dt.month
-    year = dt.year
-    if month in [4, 5, 6]:
-      return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q1 (Apr-Jun)"
-    elif month in [7, 8, 9]:
-      return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q2 (Jul-Sep)"
-    elif month in [10, 11, 12]:
-      return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q3 (Oct-Dec)"
-    else: # 1, 2, 3
-      return f"FY{str(year-1)[2:]}-{str(year)[2:]} Q4 (Jan-Mar)"
-
-  df_display_filtered["FQ"] = df_display_filtered[date_col].apply(get_fq)
-
-  # Group by Financial Quarter, Person, and Month
-  fq_list = sorted(df_display_filtered["FQ"].unique())
-  selected_fq = st.selectbox(
-      "Select Financial Quarter:",
-      options=["All Quarters"] + fq_list,
-      key="fq_selector",
-  )
-
-  if selected_fq != "All Quarters":
-    df_fq = df_display_filtered[df_display_filtered["FQ"] == selected_fq]
-  else:
-    df_fq = df_display_filtered
-
-  # Aggregate counts per Person by Month
-  fq_grouped = (
-      df_fq.groupby([error_by_col, "Month_Year"])
-      .size()
-      .reset_index(name="Error Count")
-  )
-  fq_grouped.columns = ["Person", "Month", "Error Count"]
-
-  fig_fq = px.bar(
-      fq_grouped,
-      x="Person",
-      y="Error Count",
-      color="Month",
-      barmode="group",  # Use "stack" if you prefer stacked bars per person
-      text="Error Count",
-      title="Errors per Person by Month (Financial Quarter View)",
-  )
-
-  fig_fq.update_layout(
-      xaxis_title="Person", yaxis_title="Error Count", legend_title="Month"
-  )
-  st.plotly_chart(fig_fq, use_container_width=True)
 # ---------------- 3. ERROR BY CHART (FLEXIBLE COLUMN MATCHING) ---------------- #
 error_by_col = next(
     (col for col in df.columns if "error by" in col.lower()), None
