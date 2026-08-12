@@ -126,12 +126,28 @@ selected_month_event = st.plotly_chart(
     on_select="rerun",
     key="monthly_bar_chart",
 )
+# ---------------- FILTER DASHBOARD BY CLICKED MONTH ---------------- #
+selected_month = None
+if selected_month_event and "selection" in selected_month_event:
+  points = selected_month_event["selection"].get("points", [])
+  if points:
+    selected_month = points[0].get("x")
 
+if selected_month:
+  st.info(
+      f" Selected Month Filter: **{selected_month}** (Click anywhere on chart"
+      " background to reset filter)"
+  )
+  df_display_filtered = df_filtered[
+      df_filtered["Month_Year"] == selected_month
+  ].copy()
+else:
+  df_display_filtered = df_filtered.copy()
 
 
 # ---------------- 2. FINANCIAL QUARTERLY ERROR ANALYSIS ---------------- #
 if error_by_col:
-  st.subheader("📊 Financial Quarterly Error Analysis (Person vs Month)")
+  st.subheader(" Financial Quarterly Error Analysis (Person vs Month)")
 
   def get_fq(dt):
     month = dt.month
@@ -181,23 +197,6 @@ if error_by_col:
   )
   st.plotly_chart(fig_fq, use_container_width=True)
 
-# ---------------- FILTER DASHBOARD BY CLICKED MONTH ---------------- #
-selected_month = None
-if selected_month_event and "selection" in selected_month_event:
-  points = selected_month_event["selection"].get("points", [])
-  if points:
-    selected_month = points[0].get("x")
-
-if selected_month:
-  st.info(
-      f" Selected Month Filter: **{selected_month}** (Click anywhere on chart"
-      " background to reset filter)"
-  )
-  df_display_filtered = df_filtered[
-      df_filtered["Month_Year"] == selected_month
-  ].copy()
-else:
-  df_display_filtered = df_filtered.copy()
 
 # ---------------- 3. ERROR BY CHART ---------------- #
 if error_by_col:
