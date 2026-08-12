@@ -49,7 +49,7 @@ date_range = st.sidebar.date_input(
     value=(data_min_date, data_max_date),
     min_value=data_min_date,
     max_value=data_max_date,
-    key="date_range_picker_v7",
+    key="date_range_picker_v8",
 )
 
 if len(date_range) == 2:
@@ -85,6 +85,23 @@ if df_filtered.empty:
 # Create Month Year column for grouping and filtering
 df_filtered["Month_Year"] = df_filtered[date_col].dt.strftime("%b %Y")
 
+
+# Helper function to compute Financial Quarter (Q1: Apr-Jun, Q2: Jul-Sep, Q3: Oct-Dec, Q4: Jan-Mar)
+def get_fq(dt):
+  month = dt.month
+  year = dt.year
+  if month in [4, 5, 6]:
+    return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q1 (Apr-Jun)"
+  elif month in [7, 8, 9]:
+    return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q2 (Jul-Sep)"
+  elif month in [10, 11, 12]:
+    return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q3 (Oct-Dec)"
+  else:
+    return f"FY{str(year-1)[2:]}-{str(year)[2:]} Q4 (Jan-Mar)"
+
+
+df_filtered["FQ"] = df_filtered[date_col].apply(get_fq)
+
 # ---------------- 1. MONTH-WISE ERROR COUNT CHART ---------------- #
 monthly_errors = (
     df_filtered.groupby("Month_Year", sort=False)
@@ -100,7 +117,7 @@ monthly_order = (
 
 st.subheader(" Month-wise Error Count")
 st.caption(
-    " *Click on any bar in the chart below to filter the entire dashboard by"
+    "💡 *Click on any bar in the chart below to filter the entire dashboard by"
     " that month!*"
 )
 
@@ -126,6 +143,7 @@ selected_month_event = st.plotly_chart(
     on_select="rerun",
     key="monthly_bar_chart",
 )
+
 # ---------------- FILTER DASHBOARD BY CLICKED MONTH ---------------- #
 selected_month = None
 if selected_month_event and "selection" in selected_month_event:
@@ -144,24 +162,9 @@ if selected_month:
 else:
   df_display_filtered = df_filtered.copy()
 
-
 # ---------------- 2. FINANCIAL QUARTERLY ERROR ANALYSIS ---------------- #
 if error_by_col:
-  st.subheader(" Financial Quarterly Error Analysis (Person vs Month)")
-
-  def get_fq(dt):
-    month = dt.month
-    year = dt.year
-    if month in [4, 5, 6]:
-      return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q1 (Apr-Jun)"
-    elif month in [7, 8, 9]:
-      return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q2 (Jul-Sep)"
-    elif month in [10, 11, 12]:
-      return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q3 (Oct-Dec)"
-    else:
-      return f"FY{str(year-1)[2:]}-{str(year)[2:]} Q4 (Jan-Mar)"
-
-  df_display_filtered["FQ"] = df_display_filtered[date_col].apply(get_fq)
+  st.subheader("📊 Financial Quarterly Error Analysis (Person vs Month)")
 
   fq_list = sorted(df_display_filtered["FQ"].unique())
   selected_fq = st.selectbox(
@@ -197,8 +200,28 @@ if error_by_col:
   )
   st.plotly_chart(fig_fq, use_container_width=True)
 
+# ---------------- 3. ERROR PER QUARTER ANALYSIS ---------------- #
+st.subheader(" Error per Quarter analysis")
+quarter_counts = (
+    df_display_filtered.groupby("FQ").size().reset_index(name="Error Count")
+)
+quarter_counts = quarter_counts.sort_values("FQ")
 
-# ---------------- 3. ERROR BY CHART ---------------- #
+fig_quarter = px.bar(
+    quarter_counts,
+    x="FQ",
+    y="Error Count",
+    text="Error Count",
+    color="Error Count",
+    title="Error per Quarter analysis",
+)
+fig_quarter.update_xaxes(type="category")
+fig_quarter.update_layout(
+    xaxis_title="Financial Quarter", yaxis_title="Error Count"
+)
+st.plotly_chart(fig_quarter, use_container_width=True)
+
+# ---------------- 4. ERROR BY CHART ---------------- #
 if error_by_col:
   st.subheader(" Error By")
   error_by = (
@@ -218,7 +241,7 @@ if error_by_col:
   )
   st.plotly_chart(fig1, use_container_width=True)
 
-# ---------------- 4. CONFIRMATION RECEIVED CHART ---------------- #
+# ---------------- 5. CONFIRMATION RECEIVED CHART ---------------- #
 confirmation_col = next(
     (col for col in df.columns if "confirmation" in col.lower()), None
 )
@@ -241,7 +264,7 @@ if confirmation_col:
   )
   st.plotly_chart(fig2, use_container_width=True)
 
-# ---------------- 5. CATEGORY ANALYSIS CHART ---------------- #
+# ---------------- 6. CATEGORY ANALYSIS CHART ---------------- #
 category_col = next(
     (col for col in df.columns if "category" in col.lower()), None
 )
@@ -264,7 +287,7 @@ if category_col:
   )
   st.plotly_chart(fig3, use_container_width=True)
 
-# ---------------- 6. RAW DATA ---------------- #
+# ---------------- 7. RAW DATA ---------------- #
 st.subheader(" Raw Data")
 df_display = df_display_filtered.copy()
 df_display[date_col] = df_display["Formatted Date"]
