@@ -25,6 +25,11 @@ if date_col is None:
   st.error("Date column not found.")
   st.stop()
 
+# Identify Error By column early so all sections can use it safely
+error_by_col = next(
+    (col for col in df.columns if "error by" in col.lower()), None
+)
+
 # Robust Date Parsing
 df[date_col] = df[date_col].astype(str).str.strip()
 df[date_col] = pd.to_datetime(
@@ -44,7 +49,7 @@ date_range = st.sidebar.date_input(
     value=(data_min_date, data_max_date),
     min_value=data_min_date,
     max_value=data_max_date,
-    key="date_range_picker_v6",
+    key="date_range_picker_v7",
 )
 
 if len(date_range) == 2:
@@ -140,11 +145,59 @@ if selected_month:
 else:
   df_display_filtered = df_filtered.copy()
 
-# ---------------- 3. ERROR BY CHART (FLEXIBLE COLUMN MATCHING) ---------------- #
-error_by_col = next(
-    (col for col in df.columns if "error by" in col.lower()), None
-)
+# ---------------- 2. FINANCIAL QUARTERLY ERROR ANALYSIS ---------------- #
+if error_by_col:
+  st.subheader("📊 Financial Quarterly Error Analysis (Person vs Month)")
 
+  def get_fq(dt):
+    month = dt.month
+    year = dt.year
+    if month in [4, 5, 6]:
+      return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q1 (Apr-Jun)"
+    elif month in [7, 8, 9]:
+      return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q2 (Jul-Sep)"
+    elif month in [10, 11, 12]:
+      return f"FY{str(year)[2:]}-{str(year+1)[2:]} Q3 (Oct-Dec)"
+    else:
+      return f"FY{str(year-1)[2:]}-{str(year)[2:]} Q4 (Jan-Mar)"
+
+  df_display_filtered["FQ"] = df_display_filtered[date_col].apply(get_fq)
+
+  fq_list = sorted(df_display_filtered["FQ"].unique())
+  selected_fq = st.selectbox(
+      "Select Financial Quarter:",
+      options=["All Quarters"] + fq_list,
+      key="fq_selector",
+  )
+
+  if selected_fq != "All Quarters":
+    df_fq = df_display_filtered[df_display_filtered["FQ"] == selected_fq]
+  else:
+    df_fq = df_display_filtered
+
+  fq_grouped = (
+      df_fq.groupby([error_by_col, "Month_Year"])
+      .size()
+      .reset_index(name="Error Count")
+  )
+  fq_grouped.columns = ["Person", "Month", "Error Count"]
+
+  fig_fq = px.bar(
+      fq_grouped,
+      x="Person",
+      y="Error Count",
+      color="Month",
+      barmode="group",
+      text="Error Count",
+      title="Errors per Person by Month (Financial Quarter View)",
+  )
+
+  fig_fq.update_layout(
+      xaxis_title="Person", yaxis_title="Error Count", legend_title="Month"
+  )
+  st.plotly_chart(fig_fq, use_container_width=True)
+
+# ---------------- 3. ERROR BY CHART ---------------- #
 if error_by_col:
   st.subheader(" Error By")
   error_by = (
@@ -163,12 +216,6 @@ if error_by_col:
       title="Errors By Person",
   )
   st.plotly_chart(fig1, use_container_width=True)
-else:
-  # Helpful fallback message if the column name cannot be detected
-  st.warning(
-      "Could not detect 'Error By' column. Available columns:"
-      f" {list(df.columns)}"
-  )
 
 # ---------------- 4. CONFIRMATION RECEIVED CHART ---------------- #
 confirmation_col = next(
@@ -221,7 +268,7 @@ st.subheader(" Raw Data")
 df_display = df_display_filtered.copy()
 df_display[date_col] = df_display["Formatted Date"]
 df_display = df_display.drop(
-    columns=["Formatted Date", "Month_Year"], errors="ignore"
+    columns=["Formatted Date", "Month_Year", "FQ"], errors="ignore"
 )
 
 st.dataframe(df_display, use_container_width=True)
