@@ -164,7 +164,7 @@ else:
 
 # ---------------- 2. FINANCIAL QUARTERLY ERROR ANALYSIS ---------------- #
 if error_by_col:
-  st.subheader(" Financial Quarterly Error Analysis (Person vs Month)")
+  st.subheader(" Financial Quarterly Error Analysis ")
 
   fq_list = sorted(df_display_filtered["FQ"].unique())
   selected_fq = st.selectbox(
@@ -192,7 +192,7 @@ if error_by_col:
       color="Month",
       barmode="group",
       text="Error Count",
-      title="Errors per Person by Month (Financial Quarter View)",
+      title="Errors per Person by Month ",
   )
 
   fig_fq.update_layout(
@@ -201,7 +201,6 @@ if error_by_col:
   st.plotly_chart(fig_fq, use_container_width=True)
 
 # ---------------- 3. ERROR PER QUARTER ANALYSIS ---------------- #
-st.subheader(" Error per Quarter analysis")
 quarter_counts = (
     df_display_filtered.groupby("FQ").size().reset_index(name="Error Count")
 )
