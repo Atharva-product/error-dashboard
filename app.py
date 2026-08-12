@@ -117,7 +117,7 @@ monthly_order = (
 
 st.subheader(" Month-wise Error Count")
 st.caption(
-    "💡 *Click on any bar in the chart below to filter the entire dashboard by"
+    " *Click on any bar in the chart below to filter the entire dashboard by"
     " that month!*"
 )
 
@@ -164,7 +164,7 @@ else:
 
 # ---------------- 2. FINANCIAL QUARTERLY ERROR ANALYSIS ---------------- #
 if error_by_col:
-  st.subheader("📊 Financial Quarterly Error Analysis (Person vs Month)")
+  st.subheader(" Financial Quarterly Error Analysis (Person vs Month)")
 
   fq_list = sorted(df_display_filtered["FQ"].unique())
   selected_fq = st.selectbox(
